@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>字幕切り替え PoC</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/video.js@8.24.1/dist/video-js.min.css">
+<style>
+  :root {
+    --bg: #f5f6f8; --fg: #1d2330; --muted: #5d6677; --line: #d8dce3; --accent: #1f6feb; --card: #fff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; font: 15px/1.6 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif; color: var(--fg); background: var(--bg); }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+  .lead a { color: var(--accent); }
+  fieldset { border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 8px 12px; margin: 0 0 10px; }
+  legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button.opt { border: 1px solid var(--line); background: #fff; color: var(--fg); border-radius: 6px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  button.opt[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  label.inline { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+  input[type=range] { width: 160px; }
+  #stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; border-radius: 8px; margin: 12px 0; }
+  #stage video, #stage .video-js { width: 100%; height: 100%; }
+  #stage .video-js .vjs-tech, #stage > video { transform-origin: 50% 50%; }
+  dl.status { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+  dl.status dt { color: var(--muted); }
+  dl.status dd { margin: 0; word-break: break-all; }
+  #cue { min-height: 1.6em; font-weight: 600; }
+  details { margin-top: 16px; font-size: 14px; }
+  details summary { cursor: pointer; color: var(--accent); }
+  ol li { margin: 4px 0; }
+  code { font-size: 13px; background: #eef0f3; padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>動画字幕の多言語切り替え PoC</h1>
+  <p class="lead">
+    同じ MP4 に ja と en の WebVTT を <code>&lt;track&gt;</code> で添えて、プレイヤーの描画方式ごとの見え方を比べる。
+    設定は URL に載るので、この URL をそのまま実機の Safari や iPhone に送れる。
+  </p>
+
+  <fieldset>
+    <legend>プレイヤー</legend>
+    <div class="row" id="variants"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>字幕</legend>
+    <div class="row" id="langs"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>ds 画面の再現</legend>
+    <div class="row">
+      <label class="inline">拡大 <input type="range" id="zoom" min="100" max="200" step="10"> <output id="zoomValue"></output></label>
+      <label class="inline"><input type="checkbox" id="playsinline"> playsinline</label>
+    </div>
+  </fieldset>
+
+  <div id="stage"></div>
+
+  <fieldset>
+    <legend>状態</legend>
+    <dl class="status">
+      <dt>表示中の cue</dt><dd id="cue"></dd>
+      <dt>字幕の描画</dt><dd id="renderer"></dd>
+      <dt>トラック</dt><dd id="tracks"></dd>
+      <dt>User-Agent</dt><dd id="ua"></dd>
+    </dl>
+  </fieldset>
+
+  <details open>
+    <summary>この PoC で確かめること</summary>
+    <ol>
+      <li>CC ボタンと上の言語ボタンの両方で ja / en / オフが切り替わるか。</li>
+      <li>拡大を 200% にしたとき、字幕が動画と一緒に拡大されて切れるか。Chrome と Firefox では Video.js が <code>.vjs-text-track-display</code> に描くので切れない見込み。Safari ではネイティブ描画なので切れる見込み。</li>
+      <li>Safari で「Video.js (nativeTextTracks:false)」に切り替えると、描画が vtt.js に寄って切れなくなるか。</li>
+      <li>iPhone で playsinline を外したとき、再生でネイティブ全画面に入るか。そのとき字幕が出るか、極端に小さくならないか。</li>
+      <li>cue 4 の長い本文がどう折り返されるか。</li>
+    </ol>
+    <p>元の調査: <code>marsimik/docs/plans/2026-11-02-video-subtitles-research.md</code> の 9 章。</p>
+  </details>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/video.js@8.24.1/dist/video.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var VIDEO_SRC = 'media/sample.mp4';
+
+  var TRACKS = [
+    { lang: 'ja', label: '日本語', src: 'subs/ja.vtt' },
+    { lang: 'en', label: 'English', src: 'subs/en.vtt' }
+  ];
+
+  // ds.js のコントロールバー構成に subsCapsButton を足したもの。
+  var DS_CONTROL_BAR = ['playToggle', 'playbackRateMenuButton', 'volumePanel', 'progressControl', 'remainingTimeDisplay', 'subsCapsButton'];
+
+  // 各バリアントは mount(stage, state, ready) を持ち、video と textTracks が揃ったら
+  // ready({ video, textTracks, renderer, dispose }) を呼ぶ。Video.js は tech の読み込みが非同期。
+  var VARIANTS = {
+    vjs: {
+      label: 'Video.js 8 (既定)',
+      mount: function (stage, state, ready) { mountVideojs(stage, state, {}, ready); }
+    },
+    vjsNoNative: {
+      label: 'Video.js 8 (nativeTextTracks:false)',
+      mount: function (stage, state, ready) { mountVideojs(stage, state, { nativeTextTracks: false }, ready); }
+    },
+    native: {
+      label: 'ブラウザ標準 <video controls>',
+      mount: function (stage, state, ready) {
+        var video = buildVideoElement(state, 'controls');
+        stage.appendChild(video);
+        ready({ video: video, textTracks: video.textTracks, renderer: 'ブラウザのネイティブ描画', dispose: function () { video.remove(); } });
+      }
+    }
+  };
+
+  var state = readState();
+  var current = null;
+
+  function readState() {
+    var q = new URLSearchParams(location.search);
+    return {
+      variant: VARIANTS[q.get('variant')] ? q.get('variant') : 'vjs',
+      lang: q.get('lang') || 'ja',
+      zoom: Number(q.get('zoom')) || 100,
+      playsinline: q.get('playsinline') === '1',
+      t: Number(q.get('t')) || 0
+    };
+  }
+
+  function writeState() {
+    var q = new URLSearchParams();
+    q.set('variant', state.variant);
+    q.set('lang', state.lang);
+    q.set('zoom', String(state.zoom));
+    if (state.playsinline) q.set('playsinline', '1');
+    if (state.t) q.set('t', String(state.t));
+    history.replaceState(null, '', '?' + q.toString());
+  }
+
+  function buildVideoElement(state, extraAttrs) {
+    var video = document.createElement('video');
+    video.setAttribute('preload', 'metadata');
+    if (extraAttrs) video.setAttribute(extraAttrs, '');
+    if (state.playsinline) video.setAttribute('playsinline', '');
+    var source = document.createElement('source');
+    source.src = VIDEO_SRC;
+    source.type = 'video/mp4';
+    video.appendChild(source);
+    TRACKS.forEach(function (t) {
+      var track = document.createElement('track');
+      track.kind = 'subtitles';
+      track.srclang = t.lang;
+      track.label = t.label;
+      track.src = t.src;
+      video.appendChild(track);
+    });
+    return video;
+  }
+
+  function mountVideojs(stage, state, html5Options, ready) {
+    var video = buildVideoElement(state);
+    video.className = 'video-js';
+    stage.appendChild(video);
+    var player = videojs(video, {
+      controls: true,
+      fill: true,
+      inactivityTimeout: 0,
+      playbackRates: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2],
+      html5: html5Options,
+      controlBar: { children: DS_CONTROL_BAR }
+    });
+    var native = html5Options.nativeTextTracks !== false && videojs.getTech('Html5').supportsNativeTextTracks();
+    player.ready(function () {
+      ready({
+        video: player.tech(true).el(),
+        textTracks: player.textTracks(),
+        renderer: native ? 'Video.js → ブラウザのネイティブ描画 (supportsNativeTextTracks=true)' : 'Video.js → vtt.js が .vjs-text-track-display に描画',
+        dispose: function () { player.dispose(); }
+      });
+    });
+  }
+
+  function applyLang(textTracks, lang) {
+    for (var i = 0; i < textTracks.length; i++) {
+      var track = textTracks[i];
+      if (track.kind !== 'subtitles') continue;
+      track.mode = track.language === lang ? 'showing' : 'disabled';
+    }
+  }
+
+  function applyZoom(video, zoom) {
+    video.style.transform = 'scale(' + zoom / 100 + ')';
+  }
+
+  function describeTracks(textTracks) {
+    var parts = [];
+    for (var i = 0; i < textTracks.length; i++) {
+      var t = textTracks[i];
+      parts.push(t.language + ':' + t.mode);
+    }
+    return parts.join(', ') || '(なし)';
+  }
+
+  function activeCueText(textTracks) {
+    for (var i = 0; i < textTracks.length; i++) {
+      var t = textTracks[i];
+      if (t.mode !== 'showing' || !t.activeCues) continue;
+      for (var j = 0; j < t.activeCues.length; j++) return t.activeCues[j].text;
+    }
+    return '';
+  }
+
+  function currentTime() {
+    return current ? Math.floor(current.video.currentTime) : state.t;
+  }
+
+  function refreshStatus() {
+    if (!current) return;
+    document.getElementById('cue').textContent = activeCueText(current.textTracks);
+    document.getElementById('tracks').textContent = describeTracks(current.textTracks);
+  }
+
+  function mount() {
+    var stage = document.getElementById('stage');
+    if (current) current.dispose();
+    current = null;
+    stage.innerHTML = '';
+    document.getElementById('renderer').textContent = '';
+    VARIANTS[state.variant].mount(stage, state, function (mounted) {
+      current = mounted;
+      document.getElementById('renderer').textContent = current.renderer;
+      var video = current.video;
+      applyZoom(video, state.zoom);
+      var applyInitial = function () {
+        applyLang(current.textTracks, state.lang);
+        if (state.t && Math.abs(video.currentTime - state.t) > 1) video.currentTime = state.t;
+        refreshStatus();
+      };
+      if (video.readyState >= 1) applyInitial(); else video.addEventListener('loadedmetadata', applyInitial);
+      video.addEventListener('timeupdate', refreshStatus);
+      video.addEventListener('seeked', refreshStatus);
+      current.textTracks.addEventListener('change', refreshStatus);
+      current.textTracks.addEventListener('addtrack', function () { applyLang(current.textTracks, state.lang); refreshStatus(); });
+      for (var i = 0; i < current.textTracks.length; i++) {
+        current.textTracks[i].addEventListener('cuechange', refreshStatus);
+      }
+    });
+  }
+
+  function renderButtons(containerId, items, selected, onSelect) {
+    var container = document.getElementById(containerId);
+    container.innerHTML = '';
+    items.forEach(function (item) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'opt';
+      b.textContent = item.label;
+      b.setAttribute('aria-pressed', String(item.value === selected));
+      b.addEventListener('click', function () { onSelect(item.value); });
+      container.appendChild(b);
+    });
+  }
+
+  function renderControls() {
+    renderButtons('variants', Object.keys(VARIANTS).map(function (k) { return { value: k, label: VARIANTS[k].label }; }), state.variant, function (v) {
+      state.variant = v; state.t = currentTime(); writeState(); renderControls(); mount();
+    });
+    var langItems = [{ value: 'off', label: 'オフ' }].concat(TRACKS.map(function (t) { return { value: t.lang, label: t.label }; }));
+    renderButtons('langs', langItems, state.lang, function (v) {
+      state.lang = v; writeState(); renderControls(); if (current) { applyLang(current.textTracks, v); refreshStatus(); }
+    });
+    var zoom = document.getElementById('zoom');
+    zoom.value = state.zoom;
+    document.getElementById('zoomValue').value = state.zoom + '%';
+    document.getElementById('playsinline').checked = state.playsinline;
+  }
+
+  document.getElementById('zoom').addEventListener('input', function (e) {
+    state.zoom = Number(e.target.value);
+    document.getElementById('zoomValue').value = state.zoom + '%';
+    writeState();
+    if (current) applyZoom(current.video, state.zoom);
+  });
+  document.getElementById('playsinline').addEventListener('change', function (e) {
+    state.playsinline = e.target.checked; state.t = currentTime(); writeState(); mount();
+  });
+  document.getElementById('ua').textContent = navigator.userAgent;
+
+  renderControls();
+  mount();
+})();
+</script>
+</body>
+</html>

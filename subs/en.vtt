@@ -1,0 +1,59 @@
+WEBVTT
+
+NOTE English track for the videocc PoC. Cue timings match ja.vtt.
+
+1
+00:00:00.500 --> 00:00:04.000
+This is a PoC for switching subtitle languages.
+
+2
+00:00:04.500 --> 00:00:09.000
+The video is a test pattern generated with ffmpeg.
+The clock in the middle shows the playback position.
+
+3
+00:00:09.500 --> 00:00:14.000
+Use the CC button at the bottom right,
+or the language buttons above, to switch subtitles.
+
+4
+00:00:14.500 --> 00:00:20.000
+English subtitles aim for 42 characters per line. This cue is deliberately long to check how wrapping behaves.
+
+5
+00:00:20.500 --> 00:00:25.000
+Drag the zoom slider up to 200% to see
+whether the subtitles get clipped with the video.
+
+6
+00:00:25.500 --> 00:00:30.000
+In Safari the browser draws the cues itself,
+so they are expected to scale with the video.
+
+7
+00:00:30.500 --> 00:00:35.000
+In Chrome and Firefox, Video.js draws the cues
+into a separate element.
+
+8
+00:00:35.500 --> 00:00:40.000
+The surgeon holds the needle driver in the right hand
+and stabilizes the tissue with forceps in the left.
+
+9
+00:00:40.500 --> 00:00:45.000
+Enter the tissue perpendicular to the surface
+and follow the curve of the needle with a wrist rotation.
+
+10
+00:00:45.500 --> 00:00:50.000
+Secure the knot with three throws.
+
+11
+00:00:50.500 --> 00:00:55.000
+On iPhone, the playsinline attribute changes
+how fullscreen behaves.
+
+12
+00:00:55.500 --> 00:00:59.500
+That is the end of the PoC subtitles.
