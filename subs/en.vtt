@@ -1,59 +1,327 @@
 WEBVTT
 
-NOTE English track for the videocc PoC. Cue timings match ja.vtt.
+NOTE English track. Translated from the slides and burned-in captions. Timings are approximate.
 
 1
-00:00:00.500 --> 00:00:04.000
-This is a PoC for switching subtitle languages.
+00:00:00.500 --> 00:00:07.500
+How to use the EMI knot pusher
+EMICS150 and 150C
 
 2
-00:00:04.500 --> 00:00:09.000
-The video is a test pattern generated with ffmpeg.
-The clock in the middle shows the playback position.
+00:00:07.700 --> 00:00:09.300
+Toshiaki Ito, Japanese Red Cross
+Nagoya Daiichi Hospital
 
 3
 00:00:09.500 --> 00:00:14.000
-Use the CC button at the bottom right,
-or the language buttons above, to switch subtitles.
+Features of the EMICS 150
+A round head that avoids catching nearby
+sutures or chordae when lifted
 
 4
-00:00:14.500 --> 00:00:20.000
-English subtitles aim for 42 characters per line. This cue is deliberately long to check how wrapping behaves.
+00:00:14.200 --> 00:00:19.500
+A pin-type suture catcher that spares the thread
+A deep, mirror-polished groove with low friction
 
 5
-00:00:20.500 --> 00:00:25.000
-Drag the zoom slider up to 200% to see
-whether the subtitles get clipped with the video.
+00:00:20.000 --> 00:00:29.500
+Holding the threads (right-handed)
+Not crossing them causes less confusion
 
 6
-00:00:25.500 --> 00:00:30.000
-In Safari the browser draws the cues itself,
-so they are expected to scale with the video.
+00:00:30.000 --> 00:00:34.500
+Make a loop
+1. Make one loop one-handed with the left hand
 
 7
-00:00:30.500 --> 00:00:35.000
-In Chrome and Firefox, Video.js draws the cues
-into a separate element.
+00:00:34.700 --> 00:00:39.500
+2. Hand it to the assistant for gentle traction
+This thread becomes the "axis thread"
 
 8
-00:00:35.500 --> 00:00:40.000
-The surgeon holds the needle driver in the right hand
-and stabilizes the tissue with forceps in the left.
+00:00:40.000 --> 00:00:45.000
+Load the thread on the knot pusher
+Seat the thread in the suture catcher groove
 
 9
-00:00:40.500 --> 00:00:45.000
-Enter the tissue perpendicular to the surface
-and follow the curve of the needle with a wrist rotation.
+00:00:45.200 --> 00:00:49.500
+Rest the left index finger on the knot
+The assistant keeps traction on the right thread
 
 10
-00:00:45.500 --> 00:00:50.000
-Secure the knot with three throws.
+00:00:50.000 --> 00:00:56.000
+Rotate the knot pusher clockwise
 
 11
-00:00:50.500 --> 00:00:55.000
-On iPhone, the playsinline attribute changes
-how fullscreen behaves.
+00:00:56.500 --> 00:01:02.500
+Step 1
+Before lowering the knot pusher,
+pinch the axis thread with thumb and index
 
 12
-00:00:55.500 --> 00:00:59.500
-That is the end of the PoC subtitles.
+00:01:02.700 --> 00:01:09.500
+Apply even tension to both threads
+and seat them firmly in the groove
+The assistant only holds lightly
+
+13
+00:01:10.000 --> 00:01:15.000
+Step 2
+Tilting the wrist radially slackens
+the non-axis thread slightly
+
+14
+00:01:15.200 --> 00:01:19.500
+Lowering the knot pusher in this state
+slides smoothly (tilting wrist technique)
+
+15
+00:01:20.000 --> 00:01:29.500
+Step 3
+Return the wrist. Push the knot pusher
+
+16
+00:01:30.000 --> 00:01:39.500
+Return
+The assistant keeps gentle traction
+
+17
+00:01:40.000 --> 00:01:49.500
+Second loop
+Make a loop one-handed in the same direction
+as the first (granny knot)
+
+18
+00:01:50.000 --> 00:01:59.500
+Repeat step 1
+Pinch the axis thread with your fingers
+before lowering the knot pusher
+
+19
+00:02:00.000 --> 00:02:05.000
+On the second throw, pinch the axis thread
+with thumb and index and pull firmly
+
+20
+00:02:05.200 --> 00:02:09.500
+Tilt the wrist radially and pull the axis thread
+to tighten. An application of the slip knot technique
+
+21
+00:02:10.000 --> 00:02:39.500
+The principle of the slip knot technique
+
+22
+00:02:40.000 --> 00:02:49.500
+Third throw: make a loop one-handed
+the opposite way from the first (square knot)
+
+23
+00:02:50.000 --> 00:02:59.500
+Step 2
+Tilting the wrist radially slackens
+the non-axis thread slightly
+
+24
+00:03:00.000 --> 00:03:09.500
+Whose force tightens the knot?
+Not the assistant's traction. The surgeon holds
+both threads in the left hand and tightens
+
+25
+00:03:10.000 --> 00:03:19.500
+Use the pushing force of the knot pusher
+as counter-traction so the tissue
+is not pulled and torn
+
+26
+00:03:20.000 --> 00:03:29.500
+Tightening from the fourth throw on
+Pull the axis thread slightly less than the left,
+tilt the left wrist ulnarly and tighten evenly
+
+27
+00:03:30.000 --> 00:03:39.500
+Pitfall
+Avoid a throw that merely wraps around
+the axis thread
+
+28
+00:03:40.000 --> 00:03:49.500
+Pitfall
+Pulling the left thread too hard locks the knot
+No capital "Y"
+
+29
+00:03:50.000 --> 00:03:59.500
+How to form and pull each throw
+Pull the axis thread hard on throws 1 to 3,
+the left thread on throws 4 to 6
+
+30
+00:04:00.000 --> 00:04:04.500
+Summary 1: sending the knot smoothly
+The assistant's only job is steady, light
+traction on the axis thread
+
+31
+00:04:04.700 --> 00:04:09.500
+The surgeon holds both threads in the left hand,
+seats them, applies even tension, tilts the wrist
+to slacken the non-axis thread, then pushes
+
+32
+00:04:10.000 --> 00:04:14.500
+Summary 2: making a firm knot
+Form the knot at the base of the axis thread
+On the second throw (granny), pull the axis thread hard
+
+33
+00:04:14.700 --> 00:04:19.500
+The surgeon controls the tightening with both threads
+From the fourth throw, angle the left wrist
+to pull the left thread too
+
+34
+00:04:20.000 --> 00:04:44.500
+How to use the EMICS150 (half speed)
+
+35
+00:04:45.000 --> 00:04:49.500
+Hand the right thread to the assistant
+as the axis thread
+
+36
+00:04:50.000 --> 00:04:59.500
+Load the thread on the knot pusher pin
+
+37
+00:05:00.000 --> 00:05:04.500
+Rotate 180 degrees to the right
+
+38
+00:05:05.000 --> 00:05:09.500
+Pinch the axis thread with the left thumb and index
+and seat the threads firmly in both grooves
+
+39
+00:05:10.000 --> 00:05:14.500
+Lower the knot pusher
+
+40
+00:05:15.000 --> 00:05:19.500
+Make the second throw in the same direction
+
+41
+00:05:20.000 --> 00:05:29.500
+Tighten while tilting the left wrist radially
+
+42
+00:05:30.000 --> 00:05:39.500
+Tilt the wrist slightly radially
+
+43
+00:06:00.000 --> 00:06:09.500
+Tilt the wrist and lower the knot
+
+44
+00:07:20.000 --> 00:07:24.500
+The handle is released
+
+45
+00:07:25.000 --> 00:07:29.500
+It slides down under its own weight
+
+46
+00:08:05.000 --> 00:08:09.500
+Tilting the wrist slackens the non-axis thread
+very slightly
+
+47
+00:08:10.000 --> 00:08:14.500
+Overdoing it lets the thread slip out of the groove
+
+48
+00:09:06.000 --> 00:09:14.500
+The tilting wrist technique solves
+the knot pusher's common troubles
+
+49
+00:09:14.700 --> 00:09:19.500
+The thread slips out of the groove
+Seating it first before pushing keeps it in
+
+50
+00:09:19.700 --> 00:09:24.000
+The thread catches and the knot is hard to lower
+The wrist tilt gives the non-axis thread just enough slack
+
+51
+00:09:24.200 --> 00:09:28.500
+The assistant pulls the axis thread and shortens the other side
+The surgeon controls the axis thread from the start
+
+52
+00:09:29.000 --> 00:09:39.500
+Structure of the EMICS-150C
+A small round head with a closed,
+pin-type suture catcher
+
+53
+00:09:40.000 --> 00:09:49.500
+Pass the thread through the suture catcher
+
+54
+00:09:50.000 --> 00:09:59.500
+Step 1
+Pinch the axis thread before lowering the pusher
+The assistant only holds lightly
+
+55
+00:10:00.000 --> 00:10:09.500
+Step 2
+Tilting the wrist radially slackens
+the non-axis thread slightly
+
+56
+00:10:10.000 --> 00:10:19.500
+Step 3
+Return the wrist
+Pull both threads in balance and push the knot pusher
+
+57
+00:10:20.000 --> 00:10:25.500
+Pitfalls and troubleshooting
+Slippery, supple thread: good
+High-friction thread that resists loosening: caution
+
+58
+00:10:25.700 --> 00:10:29.500
+If the knot locks while still loose,
+switch the axis thread and tighten again
+
+59
+00:10:30.000 --> 00:10:39.500
+Avoid a loose knot
+
+60
+00:10:40.000 --> 00:10:48.000
+A firm radial wrist tilt pulls the axis thread
+and tightens the knot naturally
+Press the knot pusher firmly
+
+61
+00:10:49.000 --> 00:10:56.000
+Always know which thread is the axis
+When pulling toward the wound,
+the shallower, nearer thread is the axis
+
+62
+00:10:57.000 --> 00:11:07.500
+How to choose the axis thread
+Between thread A in front and thread B from behind,
+the axis thread is A
+
+63
+00:11:08.000 --> 00:11:14.000
+(End)

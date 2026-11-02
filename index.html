@@ -33,6 +33,11 @@
   details { margin-top: 16px; font-size: 14px; }
   details summary { cursor: pointer; color: var(--accent); }
   ol li { margin: 4px 0; }
+  #qr svg { display: block; width: 160px; height: 160px; }
+  .share-text { flex: 1; min-width: 200px; font-size: 13px; }
+  .share-text p { margin: 0 0 6px; color: var(--muted); }
+  .share-text a { color: var(--accent); word-break: break-all; }
+  .hint { font-size: 12px; color: var(--muted); }
   code { font-size: 13px; background: #eef0f3; padding: 1px 4px; border-radius: 3px; }
 </style>
 </head>
@@ -40,8 +45,8 @@
 <main>
   <h1>動画字幕の多言語切り替え PoC</h1>
   <p class="lead">
-    同じ MP4 に ja と en の WebVTT を <code>&lt;track&gt;</code> で添えて、プレイヤーの描画方式ごとの見え方を比べる。
-    設定は URL に載るので、この URL をそのまま実機の Safari や iPhone に送れる。
+    教材動画「EMI ノットプッシャー EMICS150、150C の使い方」(11 分、無音、4:3)に ja と en の WebVTT を <code>&lt;track&gt;</code> で添えて、プレイヤーの描画方式ごとの見え方を比べる。
+    字幕はスライドと焼き込み字幕の文字起こしで、時刻は ±5 秒の目安。設定は URL に載るので、この URL をそのまま実機の Safari や iPhone に送れる。
   </p>
 
   <fieldset>
@@ -58,6 +63,7 @@
     <legend>ds 画面の再現</legend>
     <div class="row">
       <label class="inline">拡大 <input type="range" id="zoom" min="100" max="200" step="10"> <output id="zoomValue"></output></label>
+      <span class="hint">4:3 の動画を 16:9 の枠で cover にする ds の初期倍率は 133% に当たる</span>
       <label class="inline"><input type="checkbox" id="playsinline"> playsinline</label>
     </div>
   </fieldset>
@@ -74,6 +80,17 @@
     </dl>
   </fieldset>
 
+  <fieldset id="share">
+    <legend>実機で開く</legend>
+    <div class="row">
+      <div id="qr" aria-label="このページを開く QR コード"></div>
+      <div class="share-text">
+        <p>QR コードは今の設定を含んだ URL を指す。既定の状態では公開 URL と同じ。</p>
+        <a id="shareUrl" href="https://go-surgeons.github.io/videocc/">https://go-surgeons.github.io/videocc/</a>
+      </div>
+    </div>
+  </fieldset>
+
   <details open>
     <summary>この PoC で確かめること</summary>
     <ol>
@@ -81,18 +98,21 @@
       <li>拡大を 200% にしたとき、字幕が動画と一緒に拡大されて切れるか。Chrome と Firefox では Video.js が <code>.vjs-text-track-display</code> に描くので切れない見込み。Safari ではネイティブ描画なので切れる見込み。</li>
       <li>Safari で「Video.js (nativeTextTracks:false)」に切り替えると、描画が vtt.js に寄って切れなくなるか。</li>
       <li>iPhone で playsinline を外したとき、再生でネイティブ全画面に入るか。そのとき字幕が出るか、極端に小さくならないか。</li>
-      <li>cue 4 の長い本文がどう折り返されるか。</li>
+      <li>4:20〜9:05 の実演には焼き込み字幕がある。<code>&lt;track&gt;</code> の字幕と重なってどう見えるか(5:05 付近)。</li>
+      <li>3 行の cue (1:02 や 3:00 付近)がどう折り返されるか。</li>
     </ol>
     <p>元の調査: <code>marsimik/docs/plans/2026-11-02-video-subtitles-research.md</code> の 9 章。</p>
   </details>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/video.js@8.24.1/dist/video.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (function () {
   'use strict';
 
-  var VIDEO_SRC = 'media/sample.mp4';
+  var VIDEO_SRC = 'media/emics.mp4';
+  var PUBLIC_URL = 'https://go-surgeons.github.io/videocc/';
 
   var TRACKS = [
     { lang: 'ja', label: '日本語', src: 'subs/ja.vtt' },
@@ -145,6 +165,26 @@
     if (state.playsinline) q.set('playsinline', '1');
     if (state.t) q.set('t', String(state.t));
     history.replaceState(null, '', '?' + q.toString());
+    renderShare();
+  }
+
+  // 既定の状態なら公開 URL そのもの、そうでなければ設定付きの URL を QR に載せる。
+  function shareUrl() {
+    var defaults = state.variant === 'vjs' && state.lang === 'ja' && state.zoom === 100 && !state.playsinline && !state.t;
+    var base = location.hostname === 'go-surgeons.github.io' || location.protocol === 'file:' ? PUBLIC_URL : location.origin + location.pathname;
+    return defaults ? base : base + location.search;
+  }
+
+  function renderShare() {
+    var url = shareUrl();
+    var link = document.getElementById('shareUrl');
+    link.href = url;
+    link.textContent = url;
+    if (typeof qrcode !== 'function') return;
+    var qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
   }
 
   function buildVideoElement(state, extraAttrs) {
@@ -297,6 +337,7 @@
   document.getElementById('ua').textContent = navigator.userAgent;
 
   renderControls();
+  renderShare();
   mount();
 })();
 </script>

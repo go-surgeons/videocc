@@ -9,9 +9,9 @@
 ## 構成
 
 - `index.html` がページ本体。Video.js 8.24.1 を CDN から読む（marsimik の importmap と同じ版）。
-- `media/sample.mp4` は ffmpeg で生成した 60 秒のテストパターン。中央の時計が再生位置を示す。
-- `subs/ja.vtt` と `subs/en.vtt` は同じ時刻の cue を持つ。
-- `verify.mjs` はローカルで配信し、headless Chrome で各バリアントの状態とスクリーンショットを取る。
+- `media/emics.mp4` は go-surgeons.com の教材「EMI ノットプッシャー EMICS150、150C の使い方」(11 分 15 秒、無音)を 640x480 の H.264 に変換したもの。4:20〜9:05 の実演には焼き込み字幕がある。
+- `subs/ja.vtt` と `subs/en.vtt` は `make_subs.py` の表から生成する。動画が無音なので、cue はスライドと焼き込み字幕を 10 秒刻みのフレームから文字起こししたもので、時刻は ±5 秒の目安。字幕を直すときは `make_subs.py` を編集して再実行する。
+- `verify.mjs` はローカルで配信し、headless Chrome で各バリアントの状態とスクリーンショットを取る。配信は Range 対応の自前サーバーで行う。Range を返さないサーバー(`python3 -m http.server` など)だと Chrome が動画をシーク不可と扱い、`t` の指定が効かない。
 
 ## 使い方
 
@@ -19,9 +19,11 @@
 
 - `variant`: `vjs`（Video.js 既定）、`vjsNoNative`（`nativeTextTracks: false`）、`native`（ブラウザ標準の `<video controls>`）
 - `lang`: `ja`、`en`、`off`
-- `zoom`: 100〜200。ds 画面の拡大 transform を内側の `<video>` にかける
+- `zoom`: 100〜200。ds 画面の拡大 transform を内側の `<video>` にかける。4:3 の動画を 16:9 の枠で cover にする ds の初期倍率は 133% に当たる
 - `playsinline=1`: `<video>` に `playsinline` を付ける
 - `t`: 開始位置（秒）
+
+ページ下部の QR コードは、そのときの設定を含んだ URL を指す。
 
 ## 検証
 
