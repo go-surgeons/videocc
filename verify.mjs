@@ -109,11 +109,13 @@ for (const [name, query] of CASES) {
   await c.send('Emulation.setDeviceMetricsOverride', { width: 900, height: 1000, deviceScaleFactor: 1, mobile: false });
   await c.send('Page.navigate', { url: `${BASE}?${query}` });
   let status = {};
-  for (let i = 0; i < 40; i++) {
+  const expectedLang = new URLSearchParams(query).get('lang');
+  for (let i = 0; i < 60; i++) {
     await sleep(250);
     const r = await c.send('Runtime.evaluate', { expression: STATUS_JS, returnByValue: true });
     status = JSON.parse(r.result.result.value);
-    if (status.readyState >= 2 && status.tracks && Math.abs(status.currentTime - Number(new URLSearchParams(query).get('t'))) < 1) break;
+    const seeked = status.readyState >= 2 && status.tracks && Math.abs(status.currentTime - Number(new URLSearchParams(query).get('t'))) < 1;
+    if (seeked && (expectedLang === 'off' || status.cue !== '')) break;
   }
   await sleep(500);
   const r = await c.send('Runtime.evaluate', { expression: STATUS_JS, returnByValue: true });
@@ -123,7 +125,6 @@ for (const [name, query] of CASES) {
   const errors = c.events
     .filter((e) => e.method === 'Runtime.exceptionThrown' || (e.method === 'Log.entryAdded' && e.params.entry.level === 'error'))
     .map((e) => e.method === 'Runtime.exceptionThrown' ? e.params.exceptionDetails.text + ' ' + (e.params.exceptionDetails.exception?.description || '') : e.params.entry.text);
-  const expectedLang = new URLSearchParams(query).get('lang');
   const ok = errors.length === 0 && status.qr && status.shareUrl.endsWith('?' + query) && (expectedLang === 'off' ? status.cue === '' : status.cue !== '');
   if (!ok) failures++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}  cue=${JSON.stringify(status.cue)}  tracks=${status.tracks}  t=${status.currentTime?.toFixed(1)}  renderer=${status.renderer}  cc=${status.ccButton}  qr=${status.qr}  share=${status.shareUrl}  vttDisplay=${JSON.stringify(status.vttDisplayText)}  transform=${status.transform}`);

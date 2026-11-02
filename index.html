@@ -293,6 +293,9 @@
       current.textTracks.addEventListener('addtrack', function () { applyLang(current.textTracks, state.lang); refreshStatus(); });
       for (var i = 0; i < current.textTracks.length; i++) {
         current.textTracks[i].addEventListener('cuechange', refreshStatus);
+        // Video.js の自前トラックは一時停止中、次の timeupdate まで activeCues を更新しない。
+        // VTT の読み込みがシークより遅れたときのために、同じ位置へシークし直して更新させる。
+        current.textTracks[i].addEventListener('loadeddata', function () { video.currentTime = video.currentTime; });
       }
     });
   }
