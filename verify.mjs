@@ -26,6 +26,8 @@ const CASES = [
   ['vjs-baseline-ja', 'variant=vjs&media=baseline&lang=ja&zoom=100&t=12'],
   ['vjsLateSrc-ja', 'variant=vjsLateSrc&lang=ja&zoom=100&t=12'],
   ['vjsLateSrc-en', 'variant=vjsLateSrc&lang=en&zoom=100&t=12'],
+  ['vjs10-ja-100', 'variant=vjs10&lang=ja&zoom=100&t=12'],
+  ['vjs10-en-200', 'variant=vjs10&lang=en&zoom=200&t=12'],
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -125,6 +127,9 @@ for (const [name, query] of CASES) {
   status = JSON.parse(r.result.result.value);
   const shot = await c.send('Page.captureScreenshot', { format: 'png' });
   writeFileSync(join(OUT, `${name}.png`), Buffer.from(shot.result.data, 'base64'));
+  const rect = JSON.parse((await c.send('Runtime.evaluate', { expression: '(() => { const r = document.getElementById("stage").getBoundingClientRect(); return JSON.stringify({ x: r.x, y: r.y, width: r.width, height: r.height, scrollY: window.scrollY }); })()', returnByValue: true })).result.result.value);
+  const stageShot = await c.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: rect.x, y: rect.y + rect.scrollY, width: rect.width, height: rect.height, scale: 1 } });
+  writeFileSync(join(OUT, `${name}-stage.png`), Buffer.from(stageShot.result.data, 'base64'));
   const errors = c.events
     .filter((e) => e.method === 'Runtime.exceptionThrown' || (e.method === 'Log.entryAdded' && e.params.entry.level === 'error'))
     .map((e) => e.method === 'Runtime.exceptionThrown' ? e.params.exceptionDetails.text + ' ' + (e.params.exceptionDetails.exception?.description || '') : e.params.entry.text);

@@ -25,7 +25,8 @@
   input[type=range] { width: 160px; }
   #stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; border-radius: 8px; margin: 12px 0; }
   #stage video, #stage .video-js { width: 100%; height: 100%; }
-  #stage .video-js .vjs-tech, #stage > video { transform-origin: 50% 50%; }
+  #stage .video-js .vjs-tech, #stage > video, #stage video-player video { transform-origin: 50% 50%; }
+  #stage video-player, #stage video-skin { display: block; width: 100%; height: 100%; }
   dl.status { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
   dl.status dt { color: var(--muted); }
   dl.status dd { margin: 0; word-break: break-all; }
@@ -107,6 +108,7 @@
       <li>CC ボタンと上の言語ボタンの両方で ja / en / オフが切り替わるか。</li>
       <li>拡大を 200% にしたとき、字幕が動画と一緒に拡大されて切れるか。Chrome と Firefox では Video.js が <code>.vjs-text-track-display</code> に描くので切れない見込み。Safari ではネイティブ描画なので切れる見込み。</li>
       <li>Safari で「Video.js (nativeTextTracks:false)」に切り替えると、描画が vtt.js に寄って切れなくなるか。</li>
+      <li>「Video.js 10.2.0」は字幕描画をブラウザに任せる(vtt.js を持たない)。200% でブラウザ標準と同じように切れるか。iPhone で読み込みエラーが出ないか。</li>
       <li>iPhone で playsinline を外したとき、再生でネイティブ全画面に入るか。そのとき字幕が出るか、極端に小さくならないか。</li>
       <li>4:20〜9:05 の実演には焼き込み字幕がある。<code>&lt;track&gt;</code> の字幕と重なってどう見えるか(5:05 付近)。</li>
       <li>3 行の cue (1:02 や 3:00 付近)がどう折り返されるか。</li>
@@ -149,6 +151,19 @@
     vjsLateSrc: {
       label: 'Video.js 8 (ds と同じ player.src() で後から渡す)',
       mount: function (stage, state, ready) { mountVideojs(stage, state, {}, ready, { lateSrc: true }); }
+    },
+    vjs10: {
+      label: 'Video.js 10.2.0 (<video-player> + <video-skin>、字幕はネイティブ描画)',
+      mount: function (stage, state, ready) {
+        loadVideojs10();
+        var player = document.createElement('video-player');
+        var skin = document.createElement('video-skin');
+        var video = buildVideoElement(state);
+        skin.appendChild(video);
+        player.appendChild(skin);
+        stage.appendChild(player);
+        ready({ video: video, textTracks: video.textTracks, renderer: 'Video.js 10 → ブラウザのネイティブ描画 (::cue)', error: function () { return video.error; }, dispose: function () { player.remove(); } });
+      }
     },
     native: {
       label: 'ブラウザ標準 <video controls>',
@@ -225,6 +240,19 @@
       video.appendChild(track);
     });
     return video;
+  }
+
+  // Video.js 10 は ES モジュールの CDN バンドルで、custom element を登録するだけで動く。
+  // 使うときにだけ読み込み、要素が upgrade された時刻をイベント履歴に残す。
+  var VJS10_CDN = 'https://cdn.jsdelivr.net/npm/@videojs/cdn@10.2.0/video.js';
+  function loadVideojs10() {
+    if (document.querySelector('script[src="' + VJS10_CDN + '"]')) return;
+    var script = document.createElement('script');
+    script.type = 'module';
+    script.src = VJS10_CDN;
+    script.addEventListener('error', function () { logEvent('vjs10 script error', VJS10_CDN); });
+    document.head.appendChild(script);
+    customElements.whenDefined('video-skin').then(function () { logEvent('vjs10 upgraded', 'video-player と video-skin が定義された'); refreshStatus(); });
   }
 
   function mountVideojs(stage, state, html5Options, ready, opts) {
@@ -321,6 +349,7 @@
       current = mounted;
       document.getElementById('renderer').textContent = current.renderer;
       var video = current.video;
+      applyZoom(video, state.zoom);
       logEvent('ready', state.variant + ' ' + MEDIA[state.media].src + ' ' + (video.currentSrc || ''));
       ['loadstart', 'loadedmetadata', 'canplay', 'error', 'stalled', 'suspend', 'abort', 'emptied'].forEach(function (name) {
         video.addEventListener(name, function () {
