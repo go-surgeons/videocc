@@ -43,6 +43,7 @@
   #error { color: #b42318; }
   code { font-size: 13px; background: #eef0f3; padding: 1px 4px; border-radius: 3px; }
 </style>
+<style id="cueStyle"></style>
 </head>
 <body>
 <main>
@@ -86,6 +87,10 @@
       <span class="hint">4:3 の動画を 16:9 の枠で cover にする ds の初期倍率は 133% に当たる</span>
       <label class="inline"><input type="checkbox" id="playsinline"> playsinline</label>
     </div>
+    <div class="row">
+      <label class="inline"><input type="checkbox" id="cuefix"> ブラウザ標準字幕の補正</label>
+      <span class="hint"><code>::cue</code> の font-size と各 cue の <code>line</code> / <code>size</code> を拡大率で割り、見た目の大きさと位置を 100% のときに合わせる。描画がネイティブの変種で効く</span>
+    </div>
   </fieldset>
 
   <div id="stage"></div>
@@ -109,6 +114,7 @@
       <li>拡大を 200% にしたとき、字幕が動画と一緒に拡大されて切れるか。Chrome と Firefox では Video.js が <code>.vjs-text-track-display</code> に描くので切れない見込み。Safari ではネイティブ描画なので切れる見込み。</li>
       <li>Safari で「Video.js (nativeTextTracks:false)」に切り替えると、描画が vtt.js に寄って切れなくなるか。</li>
       <li>「Video.js 10.2.0」は字幕描画をブラウザに任せる(vtt.js を持たない)。200% でブラウザ標準と同じように切れるか。iPhone で読み込みエラーが出ないか。</li>
+      <li>「ブラウザ標準字幕の補正」を付けて 200% にしたとき、Safari でも字幕の大きさと位置が 100% のときと同じに見えるか。iOS の「字幕とキャプション」のスタイル設定が <code>::cue</code> を上書きしないか。ネイティブ全画面でどうなるか。</li>
       <li>iPhone で playsinline を外したとき、再生でネイティブ全画面に入るか。そのとき字幕が出るか、極端に小さくならないか。</li>
       <li>4:20〜9:05 の実演には焼き込み字幕がある。<code>&lt;track&gt;</code> の字幕と重なってどう見えるか(5:05 付近)。</li>
       <li>3 行の cue (1:02 や 3:00 付近)がどう折り返されるか。</li>
@@ -186,6 +192,7 @@
       lang: q.get('lang') || 'ja',
       zoom: Number(q.get('zoom')) || 100,
       playsinline: q.get('playsinline') === '1',
+      cuefix: q.get('cuefix') === '1',
       t: Number(q.get('t')) || 0
     };
   }
@@ -197,6 +204,7 @@
     q.set('lang', state.lang);
     q.set('zoom', String(state.zoom));
     if (state.playsinline) q.set('playsinline', '1');
+    if (state.cuefix) q.set('cuefix', '1');
     if (state.t) q.set('t', String(state.t));
     history.replaceState(null, '', '?' + q.toString());
     renderShare();
@@ -204,7 +212,7 @@
 
   // 既定の状態なら公開 URL そのもの、そうでなければ設定付きの URL を QR に載せる。
   function shareUrl() {
-    var defaults = state.variant === 'vjs' && state.media === 'main' && state.lang === 'ja' && state.zoom === 100 && !state.playsinline && !state.t;
+    var defaults = state.variant === 'vjs' && state.media === 'main' && state.lang === 'ja' && state.zoom === 100 && !state.playsinline && !state.cuefix && !state.t;
     var base = location.hostname === 'go-surgeons.github.io' || location.protocol === 'file:' ? PUBLIC_URL : location.origin + location.pathname;
     return defaults ? base : base + location.search;
   }
@@ -297,6 +305,48 @@
 
   function applyZoom(video, zoom) {
     video.style.transform = 'scale(' + zoom / 100 + ')';
+    applyCueFix();
+  }
+
+  // ブラウザ標準の字幕描画は <video> の箱に対して描くので、transform で拡大すると字幕も一緒に拡大され、
+  // 箱の外に出た部分が切れる。ネイティブ描画で触れるのは ::cue の font-size と、cue ごとの位置と幅だけ。
+  // 両方を拡大率で割り、見えている範囲(中央の 1/zoom)に収める。
+  var CUE_FONT_RATIO = 0.05; // Chrome の既定は動画の高さの 5%
+  var CUE_LINE_HEIGHT = 1.3;
+  function applyCueFix() {
+    var style = document.getElementById('cueStyle');
+    if (!current) { style.textContent = ''; return; }
+    var z = state.zoom / 100;
+    var active = state.cuefix && z > 1; // 100% ではブラウザの既定(コントロールを避けて下に置く)に任せる
+    var stageHeight = document.getElementById('stage').clientHeight;
+    style.textContent = active ? '#stage video::cue { font-size: ' + (stageHeight * CUE_FONT_RATIO / z).toFixed(1) + 'px; line-height: ' + CUE_LINE_HEIGHT + '; }' : '';
+    // 見えているのは箱の中央 1/z。下端からコントロールバー分(見えている高さの 18%、iPhone 幅で Video.js 10 のバーが収まる値)を空ける。
+    var visibleBottom = 100 - (100 - 100 / z) / 2 - 18 / z;
+    for (var i = 0; i < current.textTracks.length; i++) {
+      var cues = current.textTracks[i].cues;
+      if (!cues) continue;
+      for (var j = 0; j < cues.length; j++) {
+        var cue = cues[j];
+        if (active) {
+          var lines = String(cue.text || '').split('\n').length;
+          cue.snapToLines = false;
+          cue.line = Math.max(0, visibleBottom - lines * CUE_FONT_RATIO * CUE_LINE_HEIGHT * 100 / z);
+          cue.size = 100 / z;
+          cue.align = 'center';
+          // 仕様どおりなら position=50 と positionAlign='center' で中央に来るが、Chrome は箱を左に寄せる。
+          // 右端を基準にして箱の右辺を 50 + size/2 に置くと Chrome でも WebKit でも中央になる(手元で撮って確認)。
+          cue.position = 50 + 50 / z;
+          cue.positionAlign = 'line-right';
+        } else {
+          cue.snapToLines = true;
+          cue.line = 'auto';
+          cue.size = 100;
+          cue.position = 'auto';
+          cue.positionAlign = 'auto';
+        }
+      }
+    }
+    if (current.video.readyState >= 1) current.video.currentTime = current.video.currentTime;
   }
 
   function describeTracks(textTracks) {
@@ -368,11 +418,14 @@
       video.addEventListener('seeked', refreshStatus);
       current.textTracks.addEventListener('change', refreshStatus);
       current.textTracks.addEventListener('addtrack', function () { applyLang(current.textTracks, state.lang); refreshStatus(); });
+      // cue は track が有効になってから読み込まれるので、読み込み完了のたびに補正をかけ直す。
+      var trackElements = stage.querySelectorAll('track');
+      for (var k = 0; k < trackElements.length; k++) trackElements[k].addEventListener('load', applyCueFix);
       for (var i = 0; i < current.textTracks.length; i++) {
         current.textTracks[i].addEventListener('cuechange', refreshStatus);
         // Video.js の自前トラックは一時停止中、次の timeupdate まで activeCues を更新しない。
         // VTT の読み込みがシークより遅れたときのために、同じ位置へシークし直して更新させる。
-        current.textTracks[i].addEventListener('loadeddata', function () { video.currentTime = video.currentTime; });
+        current.textTracks[i].addEventListener('loadeddata', applyCueFix);
       }
     });
   }
@@ -403,8 +456,9 @@
     mediaLink.textContent = MEDIA[state.media].src;
     var langItems = [{ value: 'off', label: 'オフ' }].concat(TRACKS.map(function (t) { return { value: t.lang, label: t.label }; }));
     renderButtons('langs', langItems, state.lang, function (v) {
-      state.lang = v; writeState(); renderControls(); if (current) { applyLang(current.textTracks, v); refreshStatus(); }
+      state.lang = v; writeState(); renderControls(); if (current) { applyLang(current.textTracks, v); applyCueFix(); refreshStatus(); }
     });
+    document.getElementById('cuefix').checked = state.cuefix;
     var zoom = document.getElementById('zoom');
     zoom.value = state.zoom;
     document.getElementById('zoomValue').value = state.zoom + '%';
@@ -416,6 +470,9 @@
     document.getElementById('zoomValue').value = state.zoom + '%';
     writeState();
     if (current) applyZoom(current.video, state.zoom);
+  });
+  document.getElementById('cuefix').addEventListener('change', function (e) {
+    state.cuefix = e.target.checked; writeState(); applyCueFix();
   });
   document.getElementById('playsinline').addEventListener('change', function (e) {
     state.playsinline = e.target.checked; state.t = currentTime(); writeState(); mount();

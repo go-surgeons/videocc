@@ -28,6 +28,11 @@ const CASES = [
   ['vjsLateSrc-en', 'variant=vjsLateSrc&lang=en&zoom=100&t=12'],
   ['vjs10-ja-100', 'variant=vjs10&lang=ja&zoom=100&t=12'],
   ['vjs10-en-200', 'variant=vjs10&lang=en&zoom=200&t=12'],
+  ['native-ja-200-cuefix', 'variant=native&lang=ja&zoom=200&cuefix=1&t=12'],
+  ['native-ja-3lines-200-cuefix', 'variant=native&lang=ja&zoom=200&cuefix=1&t=64'],
+  ['native-ja-130-cuefix', 'variant=native&lang=ja&zoom=130&cuefix=1&t=64'],
+  ['vjs10-ja-200-cuefix', 'variant=vjs10&lang=ja&zoom=200&cuefix=1&t=12'],
+  ['native-ja-100-cuefix', 'variant=native&lang=ja&zoom=100&cuefix=1&t=12'],
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -100,6 +105,8 @@ const STATUS_JS = `(() => {
     vttDisplayText: display ? display.textContent.trim() : null,
     ccButton: !!stage.querySelector('.vjs-subs-caps-button'),
     qr: !!document.querySelector('#qr svg'), shareUrl: document.getElementById('shareUrl').href,
+    cueStyle: document.getElementById('cueStyle').textContent,
+    activeCueBox: (() => { for (const t of v.textTracks) if (t.mode === 'showing' && t.activeCues && t.activeCues.length) { const c = t.activeCues[0]; return { line: c.line, size: c.size, snapToLines: c.snapToLines }; } return null; })(),
   });
 })()`;
 
@@ -135,7 +142,7 @@ for (const [name, query] of CASES) {
     .map((e) => e.method === 'Runtime.exceptionThrown' ? e.params.exceptionDetails.text + ' ' + (e.params.exceptionDetails.exception?.description || '') : e.params.entry.text);
   const ok = errors.length === 0 && status.error === '' && status.qr && status.shareUrl.endsWith('?' + query) && (expectedLang === 'off' ? status.cue === '' : status.cue !== '');
   if (!ok) failures++;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}  cue=${JSON.stringify(status.cue)}  tracks=${status.tracks}  t=${status.currentTime?.toFixed(1)}  renderer=${status.renderer}  err=${JSON.stringify(status.error)}  cc=${status.ccButton}  qr=${status.qr}  share=${status.shareUrl}  vttDisplay=${JSON.stringify(status.vttDisplayText)}  transform=${status.transform}`);
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}  cue=${JSON.stringify(status.cue)}  tracks=${status.tracks}  t=${status.currentTime?.toFixed(1)}  renderer=${status.renderer}  err=${JSON.stringify(status.error)}  cc=${status.ccButton}  qr=${status.qr}  share=${status.shareUrl}  vttDisplay=${JSON.stringify(status.vttDisplayText)}  transform=${status.transform}  cueStyle=${JSON.stringify(status.cueStyle)}  cueBox=${JSON.stringify(status.activeCueBox)}`);
   for (const e of errors) console.log(`     error: ${e}`);
   c.close();
   await c.send;

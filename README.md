@@ -23,6 +23,7 @@
 - `lang`: `ja`、`en`、`off`
 - `zoom`: 100〜200。ds 画面の拡大 transform を内側の `<video>` にかける。4:3 の動画を 16:9 の枠で cover にする ds の初期倍率は 133% に当たる
 - `playsinline=1`: `<video>` に `playsinline` を付ける
+- `cuefix=1`: ブラウザ標準描画の字幕を拡大率で補正する。`::cue` の font-size と line-height、各 cue の `line` / `size` / `position` を JS で拡大率で割り、見た目の大きさと位置を 100% のときに合わせる。100% では何もしない。vtt.js 描画の変種には効かない
 - `t`: 開始位置（秒）
 
 ページ先頭の QR コードは、そのときの設定を含んだ URL を指す。既定の設定のときは公開 URL そのものを指す。
