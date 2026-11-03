@@ -37,7 +37,9 @@
   .share-text { flex: 1; min-width: 200px; font-size: 13px; }
   .share-text p { margin: 0 0 6px; color: var(--muted); }
   .share-text a { color: var(--accent); word-break: break-all; }
-  .hint { font-size: 12px; color: var(--muted); }
+  .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+  #events { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; }
+  #error { color: #b42318; }
   code { font-size: 13px; background: #eef0f3; padding: 1px 4px; border-radius: 3px; }
 </style>
 </head>
@@ -66,6 +68,12 @@
   </fieldset>
 
   <fieldset>
+    <legend>動画ファイル</legend>
+    <div class="row" id="medias"></div>
+    <p class="hint">直接開く: <a id="mediaLink" href="media/emics.mp4">media/emics.mp4</a></p>
+  </fieldset>
+
+  <fieldset>
     <legend>字幕</legend>
     <div class="row" id="langs"></div>
   </fieldset>
@@ -85,6 +93,8 @@
     <legend>状態</legend>
     <dl class="status">
       <dt>表示中の cue</dt><dd id="cue"></dd>
+      <dt>エラー</dt><dd id="error"></dd>
+      <dt>イベント</dt><dd id="events"></dd>
       <dt>字幕の描画</dt><dd id="renderer"></dd>
       <dt>トラック</dt><dd id="tracks"></dd>
       <dt>User-Agent</dt><dd id="ua"></dd>
@@ -111,7 +121,10 @@
 (function () {
   'use strict';
 
-  var VIDEO_SRC = 'media/emics.mp4';
+  var MEDIA = {
+    main: { label: 'H.264 Main 3.1 (B フレーム有、AAC mono)', src: 'media/emics.mp4' },
+    baseline: { label: 'H.264 Baseline 3.0 (B フレーム無、AAC stereo)', src: 'media/emics-baseline.mp4' }
+  };
   var PUBLIC_URL = 'https://go-surgeons.github.io/videocc/';
 
   var TRACKS = [
@@ -138,7 +151,7 @@
       mount: function (stage, state, ready) {
         var video = buildVideoElement(state, 'controls');
         stage.appendChild(video);
-        ready({ video: video, textTracks: video.textTracks, renderer: 'ブラウザのネイティブ描画', dispose: function () { video.remove(); } });
+        ready({ video: video, textTracks: video.textTracks, renderer: 'ブラウザのネイティブ描画', error: function () { return video.error; }, dispose: function () { video.remove(); } });
       }
     }
   };
@@ -150,6 +163,7 @@
     var q = new URLSearchParams(location.search);
     return {
       variant: VARIANTS[q.get('variant')] ? q.get('variant') : 'vjs',
+      media: MEDIA[q.get('media')] ? q.get('media') : 'main',
       lang: q.get('lang') || 'ja',
       zoom: Number(q.get('zoom')) || 100,
       playsinline: q.get('playsinline') === '1',
@@ -160,6 +174,7 @@
   function writeState() {
     var q = new URLSearchParams();
     q.set('variant', state.variant);
+    if (state.media !== 'main') q.set('media', state.media);
     q.set('lang', state.lang);
     q.set('zoom', String(state.zoom));
     if (state.playsinline) q.set('playsinline', '1');
@@ -170,7 +185,7 @@
 
   // 既定の状態なら公開 URL そのもの、そうでなければ設定付きの URL を QR に載せる。
   function shareUrl() {
-    var defaults = state.variant === 'vjs' && state.lang === 'ja' && state.zoom === 100 && !state.playsinline && !state.t;
+    var defaults = state.variant === 'vjs' && state.media === 'main' && state.lang === 'ja' && state.zoom === 100 && !state.playsinline && !state.t;
     var base = location.hostname === 'go-surgeons.github.io' || location.protocol === 'file:' ? PUBLIC_URL : location.origin + location.pathname;
     return defaults ? base : base + location.search;
   }
@@ -193,7 +208,7 @@
     if (extraAttrs) video.setAttribute(extraAttrs, '');
     if (state.playsinline) video.setAttribute('playsinline', '');
     var source = document.createElement('source');
-    source.src = VIDEO_SRC;
+    source.src = MEDIA[state.media].src;
     source.type = 'video/mp4';
     video.appendChild(source);
     TRACKS.forEach(function (t) {
@@ -225,6 +240,7 @@
         video: player.tech(true).el(),
         textTracks: player.textTracks(),
         renderer: native ? 'Video.js → ブラウザのネイティブ描画 (supportsNativeTextTracks=true)' : 'Video.js → vtt.js が .vjs-text-track-display に描画',
+        error: function () { return player.error() || player.tech(true).el().error; },
         dispose: function () { player.dispose(); }
       });
     });
@@ -264,8 +280,20 @@
     return current ? Math.floor(current.video.currentTime) : state.t;
   }
 
+  var events = [];
+  function logEvent(name, detail) {
+    events.push(((performance.now() / 1000).toFixed(1)) + 's ' + name + (detail ? ' ' + detail : ''));
+    document.getElementById('events').textContent = events.slice(-12).join('\n');
+  }
+
+  function describeError(err) {
+    if (!err) return '';
+    return 'code=' + err.code + ' ' + (err.message || '');
+  }
+
   function refreshStatus() {
     if (!current) return;
+    document.getElementById('error').textContent = describeError(current.error());
     document.getElementById('cue').textContent = activeCueText(current.textTracks);
     document.getElementById('tracks').textContent = describeTracks(current.textTracks);
   }
@@ -280,13 +308,20 @@
       current = mounted;
       document.getElementById('renderer').textContent = current.renderer;
       var video = current.video;
-      applyZoom(video, state.zoom);
+      logEvent('ready', state.variant + ' ' + MEDIA[state.media].src + ' ' + (video.currentSrc || ''));
+      ['loadstart', 'loadedmetadata', 'canplay', 'error', 'stalled', 'suspend', 'abort', 'emptied'].forEach(function (name) {
+        video.addEventListener(name, function () {
+          logEvent(name, name === 'error' ? describeError(video.error) : 'readyState=' + video.readyState + ' networkState=' + video.networkState);
+          refreshStatus();
+        });
+      });
       var applyInitial = function () {
         applyLang(current.textTracks, state.lang);
         if (state.t && Math.abs(video.currentTime - state.t) > 1) video.currentTime = state.t;
         refreshStatus();
       };
       if (video.readyState >= 1) applyInitial(); else video.addEventListener('loadedmetadata', applyInitial);
+      if (video.error) logEvent('error (before ready)', describeError(video.error));
       video.addEventListener('timeupdate', refreshStatus);
       video.addEventListener('seeked', refreshStatus);
       current.textTracks.addEventListener('change', refreshStatus);
@@ -318,6 +353,12 @@
     renderButtons('variants', Object.keys(VARIANTS).map(function (k) { return { value: k, label: VARIANTS[k].label }; }), state.variant, function (v) {
       state.variant = v; state.t = currentTime(); writeState(); renderControls(); mount();
     });
+    renderButtons('medias', Object.keys(MEDIA).map(function (k) { return { value: k, label: MEDIA[k].label }; }), state.media, function (v) {
+      state.media = v; state.t = currentTime(); writeState(); renderControls(); mount();
+    });
+    var mediaLink = document.getElementById('mediaLink');
+    mediaLink.href = MEDIA[state.media].src;
+    mediaLink.textContent = MEDIA[state.media].src;
     var langItems = [{ value: 'off', label: 'オフ' }].concat(TRACKS.map(function (t) { return { value: t.lang, label: t.label }; }));
     renderButtons('langs', langItems, state.lang, function (v) {
       state.lang = v; writeState(); renderControls(); if (current) { applyLang(current.textTracks, v); refreshStatus(); }

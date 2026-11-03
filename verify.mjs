@@ -23,6 +23,7 @@ const CASES = [
   ['vjsNoNative-ja-200', 'variant=vjsNoNative&lang=ja&zoom=200&t=12'],
   ['native-ja-100', 'variant=native&lang=ja&zoom=100&t=12'],
   ['native-ja-200', 'variant=native&lang=ja&zoom=200&t=12'],
+  ['vjs-baseline-ja', 'variant=vjs&media=baseline&lang=ja&zoom=100&t=12'],
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -89,7 +90,7 @@ const STATUS_JS = `(() => {
   const v = stage.querySelector('video');
   const display = stage.querySelector('.vjs-text-track-display');
   return JSON.stringify({
-    cue: t('cue'), renderer: t('renderer'), tracks: t('tracks'),
+    cue: t('cue'), renderer: t('renderer'), tracks: t('tracks'), error: t('error'),
     currentTime: v && v.currentTime, readyState: v && v.readyState,
     transform: v && v.style.transform,
     vttDisplayText: display ? display.textContent.trim() : null,
@@ -125,9 +126,9 @@ for (const [name, query] of CASES) {
   const errors = c.events
     .filter((e) => e.method === 'Runtime.exceptionThrown' || (e.method === 'Log.entryAdded' && e.params.entry.level === 'error'))
     .map((e) => e.method === 'Runtime.exceptionThrown' ? e.params.exceptionDetails.text + ' ' + (e.params.exceptionDetails.exception?.description || '') : e.params.entry.text);
-  const ok = errors.length === 0 && status.qr && status.shareUrl.endsWith('?' + query) && (expectedLang === 'off' ? status.cue === '' : status.cue !== '');
+  const ok = errors.length === 0 && status.error === '' && status.qr && status.shareUrl.endsWith('?' + query) && (expectedLang === 'off' ? status.cue === '' : status.cue !== '');
   if (!ok) failures++;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}  cue=${JSON.stringify(status.cue)}  tracks=${status.tracks}  t=${status.currentTime?.toFixed(1)}  renderer=${status.renderer}  cc=${status.ccButton}  qr=${status.qr}  share=${status.shareUrl}  vttDisplay=${JSON.stringify(status.vttDisplayText)}  transform=${status.transform}`);
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}  cue=${JSON.stringify(status.cue)}  tracks=${status.tracks}  t=${status.currentTime?.toFixed(1)}  renderer=${status.renderer}  err=${JSON.stringify(status.error)}  cc=${status.ccButton}  qr=${status.qr}  share=${status.shareUrl}  vttDisplay=${JSON.stringify(status.vttDisplayText)}  transform=${status.transform}`);
   for (const e of errors) console.log(`     error: ${e}`);
   c.close();
   await c.send;
