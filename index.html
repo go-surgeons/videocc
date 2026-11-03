@@ -146,6 +146,10 @@
       label: 'Video.js 8 (nativeTextTracks:false)',
       mount: function (stage, state, ready) { mountVideojs(stage, state, { nativeTextTracks: false }, ready); }
     },
+    vjsLateSrc: {
+      label: 'Video.js 8 (ds と同じ player.src() で後から渡す)',
+      mount: function (stage, state, ready) { mountVideojs(stage, state, {}, ready, { lateSrc: true }); }
+    },
     native: {
       label: 'ブラウザ標準 <video controls>',
       mount: function (stage, state, ready) {
@@ -202,11 +206,12 @@
     document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
   }
 
-  function buildVideoElement(state, extraAttrs) {
+  function buildVideoElement(state, extraAttrs, withoutChildren) {
     var video = document.createElement('video');
     video.setAttribute('preload', 'metadata');
     if (extraAttrs) video.setAttribute(extraAttrs, '');
     if (state.playsinline) video.setAttribute('playsinline', '');
+    if (withoutChildren) return video;
     var source = document.createElement('source');
     source.src = MEDIA[state.media].src;
     source.type = 'video/mp4';
@@ -222,8 +227,9 @@
     return video;
   }
 
-  function mountVideojs(stage, state, html5Options, ready) {
-    var video = buildVideoElement(state);
+  function mountVideojs(stage, state, html5Options, ready, opts) {
+    var lateSrc = !!(opts && opts.lateSrc);
+    var video = buildVideoElement(state, null, lateSrc);
     video.className = 'video-js';
     stage.appendChild(video);
     var player = videojs(video, {
@@ -234,6 +240,13 @@
       html5: html5Options,
       controlBar: { children: DS_CONTROL_BAR }
     });
+    if (lateSrc) {
+      // marsimik の ds.js と同じ渡し方。<source> と <track> の子要素を持たせず、JS で後から渡す。
+      player.src({ src: MEDIA[state.media].src, type: 'video/mp4' });
+      TRACKS.forEach(function (t) {
+        player.addRemoteTextTrack({ kind: 'subtitles', srclang: t.lang, label: t.label, src: t.src }, false);
+      });
+    }
     var native = html5Options.nativeTextTracks !== false && videojs.getTech('Html5').supportsNativeTextTracks();
     player.ready(function () {
       ready({

@@ -24,6 +24,8 @@ const CASES = [
   ['native-ja-100', 'variant=native&lang=ja&zoom=100&t=12'],
   ['native-ja-200', 'variant=native&lang=ja&zoom=200&t=12'],
   ['vjs-baseline-ja', 'variant=vjs&media=baseline&lang=ja&zoom=100&t=12'],
+  ['vjsLateSrc-ja', 'variant=vjsLateSrc&lang=ja&zoom=100&t=12'],
+  ['vjsLateSrc-en', 'variant=vjsLateSrc&lang=en&zoom=100&t=12'],
 ];
 
 mkdirSync(OUT, { recursive: true });
